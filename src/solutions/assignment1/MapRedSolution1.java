@@ -2,19 +2,71 @@ package solutions.assignment1;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 import examples.MapRedFileUtils;
+import examples.wordcount.MapRedWordFrequencyCount.MapRecords;
+import examples.wordcount.MapRedWordFrequencyCount.ReduceRecords;
 
 public class MapRedSolution1
 {
     /* your code goes in here*/
+    public static class MapRecords extends Mapper<LongWritable, Text, Text, IntWritable>
+    {
+        private final static IntWritable one = new IntWritable(1);
+        private Text word = new Text();
+        
+        @Override
+        protected void map(LongWritable key, Text value, Context context)
+            throws IOException, InterruptedException
+        {
+            String data = value.toString();
+            String[] websiteSplitData = data.split(" ");
+            String website = websiteSplitData[6];
+//			System.out.println(website);
+            String websiteWithHost = "";
+            if(website.charAt(0) == '/')
+            	websiteWithHost = "http://localhost"+website;
+            else
+            	websiteWithHost = website;
+//			System.out.println(websiteWithHost);
+            word.set(websiteWithHost);
+            context.write(word, one);
+//			System.out.println(timeOnlyPickupHour);
+        }
+    }
+
+    public static class ReduceRecords extends Reducer<Text, IntWritable, Text, IntWritable>
+    {
+        private IntWritable result = new IntWritable();
+
+        @Override
+        protected void reduce(Text key, Iterable<IntWritable> values,
+            Context context) throws IOException, InterruptedException
+        {
+            int sum = 0;
+        
+            for (IntWritable val : values)
+            sum += val.get();
+            
+            result.set(sum);
+            context.write(key, result);
+        }
+    }
     
     public static void main(String[] args) throws Exception
     {
@@ -32,6 +84,12 @@ public class MapRedSolution1
         Job job = Job.getInstance(conf, "MapRed Solution #1");
         
         /* your code goes in here*/
+        job.setMapperClass(MapRecords.class);
+        job.setCombinerClass(ReduceRecords.class);
+        job.setReducerClass(ReduceRecords.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
         
         FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
         FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));

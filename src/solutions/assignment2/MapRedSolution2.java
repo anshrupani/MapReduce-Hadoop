@@ -50,18 +50,23 @@ public class MapRedSolution2
         @Override
         protected void map(LongWritable key, Text value, Context context)
             throws IOException, InterruptedException
-        {    	
-            String valueString = value.toString();
-            String[] taxiSplitData = valueString.split(",");
+        {    
+			try {
+            String data = value.toString();
+            String[] taxiSplitData = data.split(",");
             String timeData = taxiSplitData[1];
 			String timeOnlyPickupHour  = timeData.substring(11,13);
-			try {
-				word.set(changeTime(timeOnlyPickupHour));
+//			System.out.println(timeOnlyPickupHour);
+//          Reconfirm if the data in the substring is an Integer-->
+			if(timeOnlyPickupHour.matches("\\d+")) {
+
+				word.set(changeTime(timeOnlyPickupHour+":00"));
+				context.write(word, one);
+			}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			context.write(word, one);
         }
     }
 
