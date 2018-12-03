@@ -84,6 +84,7 @@ public class MapRedSolution1
         Job job = Job.getInstance(conf, "MapRed Solution #1");
         
         /* your code goes in here*/
+        
         job.setMapperClass(MapRecords.class);
         job.setCombinerClass(ReduceRecords.class);
         job.setReducerClass(ReduceRecords.class);
