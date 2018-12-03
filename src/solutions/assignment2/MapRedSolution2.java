@@ -2,20 +2,87 @@ package solutions.assignment2;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 import examples.MapRedFileUtils;
+import examples.wordcount.MapRedWordFrequencyCount.MapRecords;
+import examples.wordcount.MapRedWordFrequencyCount.ReduceRecords;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 public class MapRedSolution2
 {
+	public static String out;
+	
     /* your code goes in here*/
+    public static String changeTime(String time) throws Exception {
+        try {       
+            SimpleDateFormat format24 = new SimpleDateFormat("HH:mm");
+            SimpleDateFormat format12 = new SimpleDateFormat("ha");
+            Date format24dt = format24.parse(time);
+            out = format12.format(format24dt);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+         return out.toLowerCase();
+    }
     
+    
+    public static class MapRecords extends Mapper<LongWritable, Text, Text, IntWritable>
+    {
+        private final static IntWritable one = new IntWritable(1);
+        private Text word = new Text();
+        
+        @Override
+        protected void map(LongWritable key, Text value, Context context)
+            throws IOException, InterruptedException
+        {    	
+            String valueString = value.toString();
+            String[] taxiSplitData = valueString.split(",");
+            String timeData = taxiSplitData[1];
+			String timeOnlyPickupHour  = timeData.substring(11,13);
+			try {
+				word.set(changeTime(timeOnlyPickupHour));
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			context.write(word, one);
+        }
+    }
+
+    public static class ReduceRecords extends Reducer<Text, IntWritable, Text, IntWritable>
+    {
+        private IntWritable result = new IntWritable();
+
+        @Override
+        protected void reduce(Text key, Iterable<IntWritable> values,
+            Context context) throws IOException, InterruptedException
+        {
+            int sum = 0;
+        
+            for (IntWritable val : values)
+            sum += val.get();
+            
+            result.set(sum);
+            context.write(key, result);
+        }
+    }
+	
     public static void main(String[] args) throws Exception
     {
         Configuration conf = new Configuration();
@@ -32,6 +99,12 @@ public class MapRedSolution2
         Job job = Job.getInstance(conf, "MapRed Solution #2");
         
         /* your code goes in here*/
+        job.setMapperClass(MapRecords.class);
+        job.setCombinerClass(ReduceRecords.class);
+        job.setReducerClass(ReduceRecords.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
         
         FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
         FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
