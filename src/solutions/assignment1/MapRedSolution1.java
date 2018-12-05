@@ -44,9 +44,11 @@ public class MapRedSolution1
             else
             	websiteWithHost = website;
 //			System.out.println(websiteWithHost);
-            word.set(websiteWithHost);
+            word.set(websiteWithHost.replace("\"",""));
             context.write(word, one);
 //			System.out.println(timeOnlyPickupHour);
+//            String otherWebsite = websiteSplitData[10];
+            
         }
     }
 
